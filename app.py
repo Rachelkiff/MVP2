@@ -150,7 +150,7 @@ def userendpoint():
         conn.commit()
         rows = cursor.rowcount
       except Exception as error:
-        print("Something went wrong(This is LAZY!): ")
+        print("Something went wrong: ")
         print(error)     
       finally:
         if(cursor != None):
@@ -170,15 +170,16 @@ def recipepostendpoint():
       cursor = None
       user = None
       user_id = request.args.get("user_id")
+
       rows = None
       try:
         conn = mariadb.connect(user=dbcreds.user, password=dbcreds.password, host=dbcreds.host, port=dbcreds.port, database=dbcreds.database,)
         cursor = conn.cursor()
         if user != "" and user != None:
-          cursor.execute("SELECT * FROM user WHERE id = ?", [user_id,])
+          cursor.execute("SELECT content FROM recipe_post WHERE id = ?", [user_id,])
         else:
-          cursor.execute("SELECT * FROM user")
-        user = cursor.fetchall()
+          cursor.execute("SELECT * FROM recipe_post")
+          user = cursor.fetchall()
       except Exception as error:
         print("Something went wrong: ")
         print(error)   
@@ -192,6 +193,62 @@ def recipepostendpoint():
             return Response(json.dumps(user, default=str), mimetype="application/json", status=200)
         else:
             return Response("User does not exist.", mimetype="text/html", status=500)
+    elif request.method == "POST": 
+      conn = None
+      cursor = None 
+      
+      rows = None
+      try:
+        conn = mariadb.connect(user=dbcreds.user, password=dbcreds.password, host=dbcreds.host, port=dbcreds.port, database=dbcreds.database,)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO recipe_post(content, user_id) VALUES (?,?)", [user_content, user[0],])
+        conn.commit()
+        rows = cursor.rowcount
+        if(rows == 1):
+          user = cursor.lastrowid
+          cursor.execute("INSERT INTO session(user_id, login_token) VALUES (?,?)", [user[0][0], generateToken()])
+          conn.commit()
+          rows = cursor.rowcount      
+      except Exception as error:
+        print("Something went wrong: ")
+        print(error)   
+      finally:
+        if(cursor != None):
+         cursor.close()
+        if(conn != None):
+         conn.rollback()
+         conn.close()
+        if(rows == 1):
+          return Response("User creation successfull!", mimetype="text/html", status=201)
+        else:
+          return Response("Username or email already exists!", mimetype="text/html", status=500)
+    elif request.method == "DELETE":
+      conn = None
+      cursor = None 
+      user_loginToken = request.json.get("loginToken")
+      rows = None
+      try:
+        conn = mariadb.connect(user=dbcreds.user, password=dbcreds.password, host=dbcreds.host, port=dbcreds.port, database=dbcreds.database,)
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id FROM session WHERE login_token=?", [user_loginToken,])
+        user = cursor.fetchone()
+        print(user)
+        cursor.execute("DELETE FROM recipe_post WHERE id=?", [user[0],])
+        conn.commit()
+        rows = cursor.rowcount
+      except Exception as error:
+        print("Something went wrong: ")
+        print(error)     
+      finally:
+        if(cursor != None):
+         cursor.close()
+        if(conn != None):
+         conn.rollback()
+         conn.close()
+        if(rows == 1):
+          return Response("Delete Success!", mimetype="text/html", status=204)
+        else:
+          return Response("Login token or password not valid!", mimetype="text/html", status=500)        
 
 
 
