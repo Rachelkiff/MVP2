@@ -170,7 +170,7 @@ def recipepostendpoint():
       cursor = None
       user = None
       user_id = request.args.get("user_id")
-
+      recipe_post_content = request.json.get("content")
       rows = None
       try:
         conn = mariadb.connect(user=dbcreds.user, password=dbcreds.password, host=dbcreds.host, port=dbcreds.port, database=dbcreds.database,)
@@ -190,25 +190,24 @@ def recipepostendpoint():
          conn.rollback()
          conn.close()
         if(user != None):
-            return Response(json.dumps(user, default=str), mimetype="application/json", status=200)
+            return Response(json.dumps(recipe_post, default=str), mimetype="application/json", status=200)
         else:
-            return Response("User does not exist.", mimetype="text/html", status=500)
+            return Response("Post does not exist.", mimetype="text/html", status=500)
     elif request.method == "POST": 
       conn = None
       cursor = None 
-      
+      user_loginToken = request.json.get("loginToken")
+      recipe_post_content = request.json.get("content")
       rows = None
       try:
         conn = mariadb.connect(user=dbcreds.user, password=dbcreds.password, host=dbcreds.host, port=dbcreds.port, database=dbcreds.database,)
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO recipe_post(content, user_id) VALUES (?,?)", [user_content, user[0],])
+        cursor.execute("SELECT user_id FROM session WHERE login_token=?", [user_loginToken,])
+        user = cursor.fetchone()
+        rows = cursor.rowcount 
+        cursor.execute("INSERT INTO recipe_post(content, user_id) VALUES (?,?)", [recipe_post_content, user[0],])
         conn.commit()
         rows = cursor.rowcount
-        if(rows == 1):
-          user = cursor.lastrowid
-          cursor.execute("INSERT INTO session(user_id, login_token) VALUES (?,?)", [user[0][0], generateToken()])
-          conn.commit()
-          rows = cursor.rowcount      
       except Exception as error:
         print("Something went wrong: ")
         print(error)   
@@ -219,9 +218,9 @@ def recipepostendpoint():
          conn.rollback()
          conn.close()
         if(rows == 1):
-          return Response("User creation successfull!", mimetype="text/html", status=201)
+          return Response("Recipe posted successfully!", mimetype="text/html", status=201)
         else:
-          return Response("Username or email already exists!", mimetype="text/html", status=500)
+          return Response("Something went wrong!", mimetype="text/html", status=500)
     elif request.method == "DELETE":
       conn = None
       cursor = None 
