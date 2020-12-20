@@ -109,6 +109,7 @@ def userendpoint():
       user_username = request.json.get("username")
       user_password = request.json.get("password")
       user_email = request.json.get("email")
+      loginToken = generateToken()
       rows = None
       try:
         conn = mariadb.connect(user=dbcreds.user, password=dbcreds.password, host=dbcreds.host, port=dbcreds.port, database=dbcreds.database,)
@@ -118,7 +119,7 @@ def userendpoint():
         rows = cursor.rowcount
         if(rows == 1):
           user = cursor.lastrowid
-          cursor.execute("INSERT INTO session(user_id, login_token) VALUES (?,?)", [user[0][0], generateToken()])
+          cursor.execute("INSERT INTO session(user_id, login_token) VALUES (?,?)", [user, loginToken])
           conn.commit()
           rows = cursor.rowcount      
       except Exception as error:
@@ -131,7 +132,11 @@ def userendpoint():
          conn.rollback()
          conn.close()
         if(rows == 1):
-          return Response("User creation successfull!", mimetype="text/html", status=201)
+          user = {
+             "loginToken": loginToken,
+             "userId": user
+          }
+          return Response(json.dumps(user, default=str), mimetype="text/html", status=201)
         else:
           return Response("Username or email already exists!", mimetype="text/html", status=500)
     elif request.method == "DELETE":
@@ -170,7 +175,6 @@ def recipepostendpoint():
       cursor = None
       user = None
       user_id = request.args.get("user_id")
-      recipe_post_content = request.json.get("content")
       rows = None
       try:
         conn = mariadb.connect(user=dbcreds.user, password=dbcreds.password, host=dbcreds.host, port=dbcreds.port, database=dbcreds.database,)
@@ -190,7 +194,7 @@ def recipepostendpoint():
          conn.rollback()
          conn.close()
         if(user != None):
-            return Response(json.dumps(recipe_post, default=str), mimetype="application/json", status=200)
+            return Response(json.dumps(user, default=str), mimetype="application/json", status=200)
         else:
             return Response("Post does not exist.", mimetype="text/html", status=500)
     elif request.method == "POST": 
