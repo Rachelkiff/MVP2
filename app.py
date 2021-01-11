@@ -222,9 +222,13 @@ def recipepostendpoint():
          conn.rollback()
          conn.close()
         if(rows == 1):
-          return Response("Recipe posted successfully!", mimetype="text/html", status=201)
+            user = {
+              "loginToken": loginToken,
+              "userId": user[0]
+            }
+            return Response("Recipe posted successfully!", mimetype="text/html", status=201)
         else:
-          return Response("Something went wrong!", mimetype="text/html", status=500)
+            return Response("Something went wrong!", mimetype="text/html", status=500)
     elif request.method == "DELETE":
       conn = None
       cursor = None 
